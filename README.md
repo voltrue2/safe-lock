@@ -11,28 +11,31 @@ const targetArray = [ 'a', 'b', 'c' ];
 const lock = new ObjectLock(targetArray);
 lock.aquire((target, finish) => {
     // async operation and mutate the target (targetArray)
-    target[1] = 'B';
-    target[2] = 'd';
-    target[target.length - 1] = 'c';
-    // make sure you call this to release the lock
-    finish();
+    setTimeout(() => {
+        target.splice(target.length - 1, 1);
+        target.splice(target.length - 1, 1);
+        // make sure you call this to release the lock
+        finish();
+    }, 20);
 }, (error) => {
     // if you pass an error to finish(), you will see the error here
     // the lock operation has finished
 });
 lock.aquire((target, finish) => {
     // async operation and mutate the target (targetArray)
-    target.splice(2, 1);
-    // make sure you call this to release the lock
-    finish();
+    setTimeout(() => {
+        target.push('B');
+        target.push('C');
+        // make sure you call this to release the lock
+        finish();
+    }, 5);
 }, (error) => {
     // if you pass an error to finish(), you will see the error here
     // the lock operation has finished
 });
-
 /**
 * The above operation guarantees the order of operations from top to bottom
-* so the outcome state of targetArray is always: [ 'a', 'B', 'c' ]
+* so the outcome state of targetArray is always: [ 'a', 'B', 'C' ]
 */
 ```
 
