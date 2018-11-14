@@ -34,7 +34,7 @@ lock.aquire((target, finish) => {
     // the lock operation has finished
 });
 /**
-* The above operation guarantees the order of operations from top to bottom
+* The above operations guarantee the order of operations from top to bottom
 * so the outcome state of targetArray is always: [ 'a', 'B', 'C' ]
 */
 ```
