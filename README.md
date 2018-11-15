@@ -44,7 +44,7 @@ lock.aquire((target, finish) => {
 By default, each lock has a time out of 1 second (1000 milliseconds), if one or more locked operations time out,
 The timed out operations are **NOT** guranteed to run in sync.
 
-The callback wil be called when an operaion times out with an error and moves on to the next lock operation.
+The callback will be called when an operaion times out with an error and moves on to the next lock operation.
 
 # Set Custom Lock Time Out
 
@@ -53,5 +53,25 @@ In order to set custom time out, you must pass the configurations as shown below
 ```javascript
 // The example sets the lock time out to be 30 seconds
 const lock = new ObjectLock(targetArray, { timeout: 30000 });
+```
+
+# Exceptions
+
+If your callback throws an exception, ObjectLock's lock will not hault, but continues to next.
+To catch an exception thrown in the callback, you must set a function as shown below:
+
+**NOTE** You may set one exception handler per lock instance.
+
+```javascript
+const lock = new ObjectLock(targetArray);
+lock.onException((error) => {
+    // exception thrown in the callback caught!
+});
+lock.aquire((target, finish) => {
+    // do some async operations and call finish()
+    finish();
+}, () => {
+    throw new Error('Oops an exception is thrown here!!!');
+});
 ```
 

@@ -60,6 +60,47 @@ describe('safe-lock unit tests', () => {
 
     });
 
+    it('Can execute async add & rm in orderly manner w/ lock and catch exception in the callback', (done) => {
+        init();
+        var exception = false;
+        var counter = 0;
+        var max = 4;
+        var lock = new ObjectLock(list);
+        lock.onException((error) => {
+            assert.equal(error.message, 'Unexcepted!');
+            exception = true;
+        });
+        lock.aquire((target, finish) => {
+            finish();
+        }, () => {
+            throw new Error('Unexcepted!');
+        });
+        lock.aquire((target, finish) => {
+            rm(list, 'a', 10, finish);
+        }, next);
+        lock.aquire((target, finish) => {
+            add(target, 'a', 12, finish);
+        }, next);
+        lock.aquire((target, finish) => {
+            rm(target, 'b', 15, finish);
+        }, next);
+        lock.aquire((target, finish) => {
+            add(target, 'b', 5, finish);
+        }, next);
+
+        function next() {
+            counter += 1;
+            if (counter === max) {
+                assert.equal(list.length, original.length);
+                assert.equal(list[0], 'c');
+                assert.equal(list[5], 'a');
+                assert.equal(list[6], 'b');
+                done();
+            }
+        }
+
+    });
+
     it('Can execute async add & rm in orderly manner w/ lock even w/ an exception', (done) => {
         init();
         var counter = 0;
