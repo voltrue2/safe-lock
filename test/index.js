@@ -60,25 +60,100 @@ describe('safe-lock unit tests', () => {
 
     });
 
-    it('Can operate asynchronous adds and removes in orderly manner w/ ObjectLock even when some operations takes too long', (done) => {
+    it('Can operate asynchronus adds and removes in orderly manner w/ ObjectLock even w/ an exception', (done) => {
         init();
         var counter = 0;
         var max = 4;
-        var lock = new ObjectLock(list, { timeout: 11 });
+        var lock = new ObjectLock(list);
         lock.aquire((target, finish) => {
             rm(list, 'a', 10, finish);
         }, next);
         lock.aquire((target, finish) => {
             add(target, 'a', 12, finish);
+        }, next);
+        lock.aquire((target, finish) => {
+            throw new Error('Oops');
+            rm(target, 'b', 15, finish);
+        }, next);
+        lock.aquire((target, finish) => {
+            add(target, 'b', 5, finish);
+        }, next);
+
+        function next(err) {
+            counter += 1;
+            if (counter === 3) {
+                assert(err);
+                assert.equal(err.message, 'Oops');
+            }
+            if (counter === max) {
+                assert.equal(list.length - 1, original.length);
+                assert.equal(list[0], 'b');
+                assert.equal(list[1], 'c');
+                assert.equal(list[6], 'a');
+                assert.equal(list[7], 'b');
+                done();
+            }
+        }
+
+    });
+
+    it('Can operate asynchronus adds and removes in orderly manner w/ ObjectLock even w/ an exception (retry)', (done) => {
+        init();
+        var counter = 0;
+        var max = 4;
+        var lock = new ObjectLock(list);
+        lock.aquire((target, finish) => {
+            rm(list, 'a', 10, finish);
+        }, next);
+        lock.aquire((target, finish) => {
+            throw new Error('Wow...');
+            add(target, 'a', 12, finish);
         }, (error) => {
-            assert.equal(error.message, 'ObjectLockTimeOut');
-            setTimeout(next, 20);
+            assert.equal(error.message, 'Wow...');
+            // operation aborted b/c of the exception, so try again
+            lock.aquire((target, finish) => {
+                add(target, 'a', 12, finish);
+            }, next);
         });
         lock.aquire((target, finish) => {
             rm(target, 'b', 15, finish);
-        }, (error) => {
-            assert.equal(error.message, 'ObjectLockTimeOut');
-            setTimeout(next, 20);
+        }, next);
+        lock.aquire((target, finish) => {
+            add(target, 'b', 5, finish);
+        }, next);
+
+        function next() {
+            counter += 1;
+            if (counter === max) {
+                assert.equal(list.length, original.length);
+                assert.equal(list[0], 'c');
+                assert.equal(list[5], 'a');
+                assert.equal(list[6], 'b');
+                done();
+            }
+        }
+
+    });
+
+    it('Can operate asynchronous adds and removes in orderly manner w/ ObjectLock even when some operations takes too long', (done) => {
+        init();
+        var counter = 0;
+        var max = 4;
+        var lock = new ObjectLock(list, { timeout: 20 });
+        lock.aquire((target, finish) => {
+            rm(list, 'a', 10, finish);
+        }, next);
+        lock.aquire((target, finish) => {
+            add(target, 'a', 60, finish);
+        }, () => {
+            // the operation times out, but it does executes...
+            setTimeout(next, 100);
+        });
+        lock.aquire((target, finish) => {
+            rm(target, 'b', 70, finish);
+        }, () => {
+            // the operation times out, but it does executes...
+            setTimeout(next, 100);
         });
         lock.aquire((target, finish) => {
             add(target, 'b', 5, finish);
@@ -124,7 +199,7 @@ describe('safe-lock unit tests', () => {
             counter += 1;
             if (counter === max) {
                 assert.equal(list.length, original.length);
-                assert.equal(JSON.stringify(list.reverse()), JSON.stringify(original));
+                assert.notEqual(JSON.stringify(list), JSON.stringify(original));
                 done();
             }
         }
