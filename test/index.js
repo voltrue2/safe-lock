@@ -7,7 +7,7 @@ var list = [];
 
 describe('safe-lock unit tests', () => {
 
-    it('Cannot operate asynchronous adds and removes in orderly manner w/o ObjectLock', (done) => {
+    it('Cannot execute async add & rm in orderly manner w/o lock', (done) => {
         init();
         var counter = 0;
         var max = 4;
@@ -29,7 +29,7 @@ describe('safe-lock unit tests', () => {
 
     });
 
-    it('Can operate asynchronus adds and removes in orderly manner w/ ObjectLock', (done) => {
+    it('Can execute async add & rm in orderly manner w/ lock', (done) => {
         init();
         var counter = 0;
         var max = 4;
@@ -60,7 +60,7 @@ describe('safe-lock unit tests', () => {
 
     });
 
-    it('Can operate asynchronus adds and removes in orderly manner w/ ObjectLock even w/ an exception', (done) => {
+    it('Can execute async add & rm in orderly manner w/ lock even w/ an exception', (done) => {
         init();
         var counter = 0;
         var max = 4;
@@ -97,7 +97,7 @@ describe('safe-lock unit tests', () => {
 
     });
 
-    it('Can operate asynchronus adds and removes in orderly manner w/ ObjectLock even w/ an exception (retry)', (done) => {
+    it('Can execute async add & rm in orderly manner w/ lock even w/ an exception (retry)', (done) => {
         init();
         var counter = 0;
         var max = 4;
@@ -135,44 +135,53 @@ describe('safe-lock unit tests', () => {
 
     });
 
-    it('Can operate asynchronous adds and removes in orderly manner w/ ObjectLock even when some operations takes too long', (done) => {
+    it('Execute async add & rm w/ lock and don\'t hang even when some operations time out (timed out operations are out of sync)', (done) => {
         init();
         var counter = 0;
-        var max = 4;
+        var max = 5;
         var lock = new ObjectLock(list, { timeout: 20 });
         lock.aquire((target, finish) => {
             rm(list, 'a', 10, finish);
         }, next);
         lock.aquire((target, finish) => {
             add(target, 'a', 60, finish);
-        }, () => {
-            // the operation times out, but it does executes...
-            setTimeout(next, 100);
+        }, (error) => {
+            assert.equal(error.message, 'ObjectLockTimeout');
+            console.log('add a 60 timed out');
+            next();
         });
         lock.aquire((target, finish) => {
             rm(target, 'b', 70, finish);
-        }, () => {
-            // the operation times out, but it does executes...
-            setTimeout(next, 100);
+        }, (error) => {
+            assert.equal(error.message, 'ObjectLockTimeout');
+            console.log('rm  b 70 timed out');
+            next();
         });
         lock.aquire((target, finish) => {
             add(target, 'b', 5, finish);
         }, next);
+        lock.aquire((target, finish) => {
+            add(target, 'z', 1, finish);
+        }, () => {
+            // wait until the timed out operations (two of them) are finished
+            setTimeout(next, 60 + 70);
+        });
 
         function next() {
             counter += 1;
             if (counter === max) {
-                assert.equal(list.length, original.length);
+                assert.equal(list.length - 1, original.length);
                 assert.equal(list[0], 'c');
-                assert.equal(list[5], 'a');
-                assert.equal(list[6], 'b');
+                assert.equal(list[5], 'b');
+                assert.equal(list[6], 'z');
+                assert.equal(list[7], 'a');
                 done();
             }
         }
 
     });
 
-    it('Cannot operate asynchronous adds and removes in orderly manner w/o ObjectLock when there are race conditions', (done) => {
+    it('Cannot execute async add & rm in orderly manner w/o ObjectLock when there are race conditions', (done) => {
         init();
         var counter = 0;
         var max = 14;
@@ -206,7 +215,7 @@ describe('safe-lock unit tests', () => {
 
     });
 
-    it('Can operate asynchronous adds and removes in orderly manner w/ ObjectLock even when there are race conditions', (done) => {
+    it('Can execute async add & rm in orderly manner w/ lock even when there are race conditions', (done) => {
         init();
         var counter = 0;
         var max = 14;
