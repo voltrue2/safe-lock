@@ -226,6 +226,7 @@ describe('safe-lock unit tests', () => {
         init();
         var counter = 0;
         var max = 14;
+        var start = Date.now();
         add(list, 'a', 8, next);
         add(list, 'b', 7, next);
         add(list, 'c', 6, next);
@@ -250,6 +251,7 @@ describe('safe-lock unit tests', () => {
             if (counter === max) {
                 assert.equal(list.length, original.length);
                 assert.notEqual(JSON.stringify(list), JSON.stringify(original));
+                console.log('All operations completed in', Date.now() - start, 'milliseconds');
                 done();
             }
         }
@@ -260,6 +262,7 @@ describe('safe-lock unit tests', () => {
         init();
         var counter = 0;
         var max = 14;
+        var start = Date.now();
         var lock = new ObjectLock(list);
         lock.aquire((target, finish) => {
             add(target, 'a', 8, finish);
@@ -313,6 +316,7 @@ describe('safe-lock unit tests', () => {
             if (counter === max) {
                 assert.equal(list.length, original.length);
                 assert.equal(JSON.stringify(list), JSON.stringify(original));
+                console.log('All operations completed in', Date.now() - start, 'milliseconds');
                 done();
             }
         }
